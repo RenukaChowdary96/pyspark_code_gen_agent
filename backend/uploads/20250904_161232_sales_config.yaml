@@ -1,0 +1,53 @@
+# Simplified ETL Configuration - Essential Information Only
+# Oracle to Databricks - Customer Product Monthly Sales
+
+metadata:
+  use_case: "customer_product_monthly_sales"
+  description: "Monthly sales aggregation by customer and product"
+
+# Source - Essential Connection Info
+source:
+  type: "oracle"
+  tables: ["CUSTOMERS", "PRODUCTS", "SALES"]
+  connection_vars: ["ORACLE_HOST", "ORACLE_PORT", "ORACLE_SERVICE_NAME", "ORACLE_USERNAME", "ORACLE_PASSWORD"]
+
+# Target - Essential Output Info  
+target:
+  type: "databricks_delta"
+  table_name: "customer_product_monthly_sales"
+  partition_by: ["year", "month"]
+  cluster_by: ["customer_id", "product_id"]
+
+# Business Rules - Core Filters
+business_rules:
+  - "customers.STATUS = 'ACTIVE'"
+  - "products.STATUS = 'ACTIVE'" 
+  - "sales.QUANTITY > 0"
+  - "sales.TOTAL_AMOUNT > 0"
+
+# Aggregation Requirements
+aggregations:
+  group_by:
+    - "customer_id"
+    - "customer_name"
+    - "product_id" 
+    - "product_name"
+    - "product_category"
+    - "year(sale_date)"
+    - "month(sale_date)"
+  
+  measures:
+    - name: "total_sales_count"
+      expression: "COUNT(*)"
+    - name: "total_quantity"
+      expression: "SUM(quantity)"
+    - name: "total_revenue" 
+      expression: "SUM(total_amount)"
+    - name: "avg_sale_amount"
+      expression: "AVG(total_amount)"
+
+# Performance Hints
+performance:
+  broadcast_tables: ["CUSTOMERS", "PRODUCTS"]
+  partition_sales: 10
+  optimize: "ZORDER BY (customer_id, product_id)"
